@@ -1,6 +1,5 @@
 package com.callrecord.app.ui.screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -24,6 +23,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -50,73 +50,75 @@ fun HomeScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var menuExpanded by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground
     ) {
-        TopAppBar(
-            title = { Text(text = "Recordings") },
-            actions = {
-                IconButton(onClick = onOpenSettings) {
-                    Icon(Icons.Default.Settings, contentDescription = "Settings")
+        Column(modifier = Modifier.fillMaxSize()) {
+            TopAppBar(
+                title = { Text(text = "Recordings") },
+                actions = {
+                    IconButton(onClick = onOpenSettings) {
+                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+                    }
                 }
-            }
-        )
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            OutlinedTextField(
-                value = state.query,
-                onValueChange = viewModel::updateQuery,
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                label = { Text("Search") },
-                modifier = Modifier.fillMaxWidth()
             )
 
-            ExposedDropdownMenuBox(
-                expanded = menuExpanded,
-                onExpandedChange = { menuExpanded = !menuExpanded }
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 OutlinedTextField(
-                    value = state.filter.label,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Filter") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = menuExpanded) },
-                    modifier = Modifier
-                        .menuAnchor()
-                        .fillMaxWidth()
+                    value = state.query,
+                    onValueChange = viewModel::updateQuery,
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    label = { Text("Search") },
+                    modifier = Modifier.fillMaxWidth()
                 )
-                ExposedDropdownMenu(
+
+                ExposedDropdownMenuBox(
                     expanded = menuExpanded,
-                    onDismissRequest = { menuExpanded = false }
+                    onExpandedChange = { menuExpanded = !menuExpanded }
                 ) {
-                    CallTypeFilter.values().forEach { filter ->
-                        DropdownMenuItem(
-                            text = { Text(filter.label) },
-                            onClick = {
-                                viewModel.updateFilter(filter)
-                                menuExpanded = false
-                            }
-                        )
+                    OutlinedTextField(
+                        value = state.filter.label,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Filter") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = menuExpanded) },
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = menuExpanded,
+                        onDismissRequest = { menuExpanded = false }
+                    ) {
+                        CallTypeFilter.values().forEach { filter ->
+                            DropdownMenuItem(
+                                text = { Text(filter.label) },
+                                onClick = {
+                                    viewModel.updateFilter(filter)
+                                    menuExpanded = false
+                                }
+                            )
+                        }
                     }
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
-        LazyColumn(
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(state.recordings) { recording ->
-                RecordingItem(recording = recording, onClick = { onOpenDetail(recording.id) })
+            LazyColumn(
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(state.recordings) { recording ->
+                    RecordingItem(recording = recording, onClick = { onOpenDetail(recording.id) })
+                }
             }
         }
     }

@@ -1,7 +1,6 @@
 package com.callrecord.app.ui.screens
 
 import android.media.MediaPlayer
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,6 +20,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -73,91 +73,92 @@ fun DetailScreen(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground
     ) {
-        TopAppBar(
-            title = { Text("Recording") },
-            navigationIcon = {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                }
-            },
-            actions = {
-                IconButton(onClick = {
-                    val filePath = recording?.filePath ?: return@IconButton
-                    ShareUtils.shareRecording(context, File(filePath))
-                }) {
-                    Icon(Icons.Default.Share, contentDescription = "Share")
-                }
-                IconButton(onClick = {
-                    viewModel.deleteRecording()
-                    onBack()
-                }) {
-                    Icon(Icons.Default.Delete, contentDescription = "Delete")
-                }
-            }
-        )
-
-        val current = recording
-        if (current == null) {
-            Column(modifier = Modifier.padding(24.dp)) {
-                Text(text = "Recording not found", style = MaterialTheme.typography.titleMedium)
-            }
-            return
-        }
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = current.contactName.ifBlank { "Unknown" },
-                style = MaterialTheme.typography.titleLarge
-            )
-            Text(
-                text = current.phoneNumber.ifBlank { "Unknown" },
-                style = MaterialTheme.typography.bodyLarge
-            )
-            Text(
-                text = current.callType.label,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                text = DateTimeFormatter.formatReadable(current.startedAt),
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Text(
-                text = "Duration ${DurationFormatter.formatDuration(current.durationMs)}",
-                style = MaterialTheme.typography.bodyMedium
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(onClick = {
-                    if (!isPrepared) {
-                        return@Button
+        Column(modifier = Modifier.fillMaxSize()) {
+            TopAppBar(
+                title = { Text("Recording") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
-                    if (isPlaying) {
-                        runCatching { player.pause() }
-                        isPlaying = false
-                    } else {
-                        runCatching { player.start() }
-                        isPlaying = true
-                        player.setOnCompletionListener { isPlaying = false }
+                },
+                actions = {
+                    IconButton(onClick = {
+                        val filePath = recording?.filePath ?: return@IconButton
+                        ShareUtils.shareRecording(context, File(filePath))
+                    }) {
+                        Icon(Icons.Default.Share, contentDescription = "Share")
                     }
-                }) {
-                    Icon(
-                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = null
+                    IconButton(onClick = {
+                        viewModel.deleteRecording()
+                        onBack()
+                    }) {
+                        Icon(Icons.Default.Delete, contentDescription = "Delete")
+                    }
+                }
+            )
+
+            val current = recording
+            if (current == null) {
+                Column(modifier = Modifier.padding(24.dp)) {
+                    Text(text = "Recording not found", style = MaterialTheme.typography.titleMedium)
+                }
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = current.contactName.ifBlank { "Unknown" },
+                        style = MaterialTheme.typography.titleLarge
                     )
-                    Text(text = if (isPlaying) "Pause" else "Play")
+                    Text(
+                        text = current.phoneNumber.ifBlank { "Unknown" },
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = current.callType.label,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = DateTimeFormatter.formatReadable(current.startedAt),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = "Duration ${DurationFormatter.formatDuration(current.durationMs)}",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Button(onClick = {
+                            if (!isPrepared) {
+                                return@Button
+                            }
+                            if (isPlaying) {
+                                runCatching { player.pause() }
+                                isPlaying = false
+                            } else {
+                                runCatching { player.start() }
+                                isPlaying = true
+                                player.setOnCompletionListener { isPlaying = false }
+                            }
+                        }) {
+                            Icon(
+                                imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                contentDescription = null
+                            )
+                            Text(text = if (isPlaying) "Pause" else "Play")
+                        }
+                    }
                 }
             }
         }
