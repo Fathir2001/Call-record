@@ -1,0 +1,6 @@
+<resources>
+    <style name="Theme.CallRecord" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:statusBarColor">@color/primary_background</item>
+        <item name="android:navigationBarColor">@color/primary_background</item>
+    </style>
+</resources>
