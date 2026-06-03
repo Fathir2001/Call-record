@@ -28,6 +28,26 @@ object NotificationHelper {
         }
     }
 
+    fun buildServiceNotification(context: Context): Notification {
+        val stopIntent = Intent(context, RecorderService::class.java).apply {
+            action = RecorderService.ACTION_DISABLE
+        }
+        val stopPendingIntent = PendingIntent.getService(
+            context,
+            3,
+            stopIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or pendingIntentImmutableFlag()
+        )
+
+        return NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(context.getString(R.string.service_notification_title))
+            .setContentText(context.getString(R.string.service_notification_text))
+            .setOngoing(true)
+            .addAction(0, context.getString(R.string.stop_service), stopPendingIntent)
+            .build()
+    }
+
     fun buildRecordingNotification(context: Context): Notification {
         val stopIntent = Intent(context, RecorderService::class.java).apply {
             action = RecorderService.ACTION_STOP

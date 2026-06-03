@@ -1,5 +1,6 @@
 package com.callrecord.app.service
 
+import android.app.ActivityManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -41,23 +42,31 @@ class RecorderService : Service() {
     private var currentContact: String = "Unknown"
     private var currentAudioSource: Int = -1
     private var startedAt: Long = 0
+    private var isInForeground: Boolean = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
+            ACTION_ENABLE -> handleEnable()
+            ACTION_DISABLE -> handleDisable()
             ACTION_START -> handleStart(intent)
             ACTION_STOP -> handleStop()
         }
         return START_STICKY
     }
 
+    private fun handleEnable() {
+        NotificationHelper.ensureChannel(this)
+        startForeground(NOTIFICATION_ID, NotificationHelper.buildServiceNotification(this))
+        isInForeground = true
+    }
+
     private fun handleStart(intent: Intent) {
         if (callStateStore.isRecording || !settingsStore.isAutoRecordEnabled()) {
             return
         }
-        NotificationHelper.ensureChannel(this)
-        startForeground(NOTIFICATION_ID, NotificationHelper.buildRecordingNotification(this))
+        ensureForegroundRecording()
 
         currentNumber = intent.getStringExtra(EXTRA_NUMBER) ?: "Unknown"
         currentContact = intent.getStringExtra(EXTRA_CONTACT) ?: "Unknown"
@@ -80,16 +89,14 @@ class RecorderService : Service() {
             }
             is RecorderStartResult.Failure -> {
                 Log.w(TAG, "Recording failed: ${result.reason}", result.error)
-                stopForegroundCompat()
-                stopSelf()
+                stopOrResumeIdle()
             }
         }
     }
 
     private fun handleStop() {
         if (!callStateStore.isRecording) {
-            stopForegroundCompat()
-            stopSelf()
+            stopOrResumeIdle()
             return
         }
 
@@ -115,8 +122,39 @@ class RecorderService : Service() {
         callStateStore.lastCallType = ""
         callStateStore.callStartTime = 0L
         currentFile = null
+        stopOrResumeIdle()
+    }
+
+    private fun handleDisable() {
+        if (callStateStore.isRecording) {
+            handleStop()
+            return
+        }
         stopForegroundCompat()
         stopSelf()
+        isInForeground = false
+    }
+
+    private fun stopOrResumeIdle() {
+        if (settingsStore.isAutoRecordEnabled()) {
+            ensureForegroundReady()
+        } else {
+            stopForegroundCompat()
+            stopSelf()
+            isInForeground = false
+        }
+    }
+
+    private fun ensureForegroundReady() {
+        NotificationHelper.ensureChannel(this)
+        startForeground(NOTIFICATION_ID, NotificationHelper.buildServiceNotification(this))
+        isInForeground = true
+    }
+
+    private fun ensureForegroundRecording() {
+        NotificationHelper.ensureChannel(this)
+        startForeground(NOTIFICATION_ID, NotificationHelper.buildRecordingNotification(this))
+        isInForeground = true
     }
 
     private fun stopForegroundCompat() {
@@ -133,10 +171,13 @@ class RecorderService : Service() {
         serviceScope.launch {
             callStateStore.isRecording = false
         }
+        isInForeground = false
         super.onDestroy()
     }
 
     companion object {
+        const val ACTION_ENABLE = "com.callrecord.app.action.ENABLE"
+        const val ACTION_DISABLE = "com.callrecord.app.action.DISABLE"
         const val ACTION_START = "com.callrecord.app.action.START"
         const val ACTION_STOP = "com.callrecord.app.action.STOP"
         const val EXTRA_NUMBER = "extra_number"
@@ -145,19 +186,37 @@ class RecorderService : Service() {
         private const val NOTIFICATION_ID = 1201
         private const val TAG = "RecorderService"
 
+        fun enable(context: Context) {
+            val intent = Intent(context, RecorderService::class.java).apply {
+                action = ACTION_ENABLE
+            }
+            ContextCompat.startForegroundService(context, intent)
+        }
+
+        fun disable(context: Context) {
+            val intent = Intent(context, RecorderService::class.java).apply {
+                action = ACTION_DISABLE
+            }
+            context.startService(intent)
+        }
+
         fun start(
             context: Context,
             callType: CallType,
             number: String,
             contactName: String
         ) {
+            if (!isServiceRunning(context)) {
+                Log.w(TAG, "Recorder service not running; start ignored.")
+                return
+            }
             val intent = Intent(context, RecorderService::class.java).apply {
                 action = ACTION_START
                 putExtra(EXTRA_CALL_TYPE, callType.name)
                 putExtra(EXTRA_NUMBER, number)
                 putExtra(EXTRA_CONTACT, contactName)
             }
-            ContextCompat.startForegroundService(context, intent)
+            context.startService(intent)
         }
 
         fun stop(context: Context) {
@@ -165,6 +224,14 @@ class RecorderService : Service() {
                 action = ACTION_STOP
             }
             context.startService(intent)
+        }
+
+        @Suppress("DEPRECATION")
+        private fun isServiceRunning(context: Context): Boolean {
+            val manager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+            return manager.getRunningServices(Int.MAX_VALUE).any { serviceInfo ->
+                serviceInfo.service.className == RecorderService::class.java.name
+            }
         }
     }
 }

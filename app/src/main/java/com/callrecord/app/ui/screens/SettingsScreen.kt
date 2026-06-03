@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.callrecord.app.service.RecorderService
 import com.callrecord.app.ui.viewmodel.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -78,7 +79,14 @@ fun SettingsScreen(
                     }
                     Switch(
                         checked = state.autoRecordEnabled,
-                        onCheckedChange = viewModel::setAutoRecordEnabled
+                        onCheckedChange = { enabled ->
+                            viewModel.setAutoRecordEnabled(enabled)
+                            if (enabled) {
+                                RecorderService.enable(context)
+                            } else {
+                                RecorderService.disable(context)
+                            }
+                        }
                     )
                 }
 
